@@ -17,7 +17,7 @@ Didesain dengan arsitektur **1 STB 1 IP Murni (Tanpa Proxy Internal)**, alokasi 
    * Form pengaturan akun terpusat dengan tombol *Apply & Restart*.
    * Tombol *Log Realtime* dan *Restart Container* individual.
 3. **Alokasi RAM Aman & Hemat Daya**  
-   Setiap container dipasangi *Hard Resource Limit* (`mem_limit`). Total pemakaian RAM seluruh container sangat hemat (~400 – 500 MB), menyisakan lebih dari **1.300 MB (~60%+) RAM bebas** di STB 2 GB untuk menjaga suhu adem dan mencegah *OOM Killer*.
+   Setiap container dipasangi *Hard Resource Limit* (`mem_limit`). Total pemakaian RAM seluruh container sangat hemat (~200 – 300 MB), menyisakan lebih dari **1.600 MB (~80%+) RAM bebas** di STB 2 GB untuk menjaga suhu adem dan mencegah *OOM Killer*.
 4. **Auto-Provisioning & Self-Healing**  
    Stack container siap jalan dengan konfigurasi otomatis dan *restart policy* andal jika terjadi gangguan koneksi atau reboot perangkat.
 5. **Menu Update 1-Klik**  
@@ -25,7 +25,7 @@ Didesain dengan arsitektur **1 STB 1 IP Murni (Tanpa Proxy Internal)**, alokasi 
 
 ---
 
-## 📋 Daftar 8 Layanan Legit Terintegrasi (Docker ARM64 & AMD64)
+## 📋 Daftar 7 Layanan Legit Terintegrasi (Docker ARM64 & AMD64)
 
 | No | Layanan | Docker Image | Min. Payout | Metode Payout | Status Arsitektur |
 | :---: | :--- | :--- | :---: | :--- | :---: |
@@ -35,8 +35,7 @@ Didesain dengan arsitektur **1 STB 1 IP Murni (Tanpa Proxy Internal)**, alokasi 
 | 4 | **Honeygain** | `honeygain/honeygain:latest` | **$0** (JMPT) / $20 | JumpTask (Crypto) / PayPal | ARM64 / AMD64 |
 | 5 | **TraffMonetizer**| `traffmonetizer/cli:arm64v8` | **$10** | USDT (TRC-20), BTC | Multi-tag Otomatis |
 | 6 | **EarnFM** | `earnfm/earnfm-client:latest`| **$15** | PayPal, USDT, Crypto | ARM64 / AMD64 |
-| 7 | **PacketShare** | `packetshare/packetshare:latest`| **$10** | PayPal, Crypto | ARM64 / AMD64 |
-| 8 | **Repocket** | `repocket/repocket:latest` | **$20** | PayPal, Wise | ARM64 / AMD64 |
+| 7 | **Repocket** | `repocket/repocket:latest` | **$20** | PayPal, Wise | ARM64 / AMD64 |
 
 ---
 
@@ -61,34 +60,29 @@ File konfigurasi terletak di `/opt/stb-cuanin/config.txt`. Anda dapat mengeditny
 
 ```text
 # 1. Pawns.app (IPRoyal)
-# DAFTAR: https://pawns.app?r=MiNe
+# DAFTAR: https://pawns.app/?r=16604653
 PAWNS_EMAIL=
 PAWNS_PASSWORD=
 
 # 2. PacketStream
-# DAFTAR: https://packetstream.io/?psr=3zSD
+# DAFTAR: https://packetstream.io/share-bandwidth/?psr=15mskkd307
 PACKETSTREAM_CID=
 
 # 3. Honeygain
-# DAFTAR: https://r.honeygain.me/MINDL15721
+# DAFTAR: https://join.honeygain.com/T3RNA0D471
 HONEYGAIN_EMAIL=
 HONEYGAIN_PASSWORD=
 
 # 4. TraffMonetizer
-# DAFTAR: https://traffmonetizer.com/?aff=366499
+# DAFTAR: https://traffmonetizer.com/?aff=2128139
 TRAFFMONETIZER_TOKEN=
 
 # 5. EarnFM
-# DAFTAR: https://earn.fm/ref/MATTTAV6
+# DAFTAR: https://earn.fm/ref/TERNKIO4
 EARNFM_TOKEN=
 
-# 6. PacketShare
-# DAFTAR: https://www.packetshare.io/?code=A260871CFD822E35
-PACKETSHARE_EMAIL=
-PACKETSHARE_PASSWORD=
-
-# 7. Repocket
-# DAFTAR: https://link.repocket.co/hr8i
+# 6. Repocket
+# DAFTAR: https://repocket.com/
 REPOCKET_EMAIL=
 REPOCKET_API_KEY=
 ```

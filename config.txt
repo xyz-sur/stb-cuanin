@@ -9,14 +9,14 @@
 
 # ------------------------------------------------------------------------------
 # 1. Pawns.app (IPRoyal) - Minimal Payout: $5 (PayPal, Crypto, Gift Card)
-# DAFTAR: https://pawns.app?r=MiNe
+# DAFTAR: https://pawns.app/?r=16604653
 # ------------------------------------------------------------------------------
 PAWNS_EMAIL=
 PAWNS_PASSWORD=
 
 # ------------------------------------------------------------------------------
 # 2. PacketStream - Minimal Payout: $5 (PayPal)
-# DAFTAR: https://packetstream.io/?psr=3zSD
+# DAFTAR: https://packetstream.io/share-bandwidth/?psr=15mskkd307
 # ------------------------------------------------------------------------------
 PACKETSTREAM_CID=
 
@@ -24,37 +24,31 @@ PACKETSTREAM_CID=
 # 3. EarnApp - Minimal Payout: $10 (PayPal, Wise, Gift Card - Auto Redeem)
 # DAFTAR: https://earnapp.com/i/3zulx7k
 # CATATAN: Untuk EarnApp, klaim/tautkan perangkat melalui tombol di Web Dashboard port 12345
+# atau buka tautan di /opt/stb-cuanin/link_earnapps.txt
 # ------------------------------------------------------------------------------
 
 # ------------------------------------------------------------------------------
 # 4. Honeygain - Minimal Payout: $0 via JumpTask (JMPT) / $20 via PayPal
-# DAFTAR: https://r.honeygain.me/MINDL15721
+# DAFTAR: https://join.honeygain.com/T3RNA0D471
 # ------------------------------------------------------------------------------
 HONEYGAIN_EMAIL=
 HONEYGAIN_PASSWORD=
 
 # ------------------------------------------------------------------------------
 # 5. TraffMonetizer - Minimal Payout: $10 (USDT TRC-20, BTC)
-# DAFTAR: https://traffmonetizer.com/?aff=366499
+# DAFTAR: https://traffmonetizer.com/?aff=2128139
 # ------------------------------------------------------------------------------
 TRAFFMONETIZER_TOKEN=
 
 # ------------------------------------------------------------------------------
 # 6. EarnFM - Minimal Payout: $15 (USDT, Crypto, PayPal)
-# DAFTAR: https://earn.fm/ref/MATTTAV6
+# DAFTAR: https://earn.fm/ref/TERNKIO4
 # ------------------------------------------------------------------------------
 EARNFM_TOKEN=
 
 # ------------------------------------------------------------------------------
-# 7. PacketShare - Minimal Payout: $10 (PayPal, Crypto)
-# DAFTAR: https://www.packetshare.io/?code=A260871CFD822E35
-# ------------------------------------------------------------------------------
-PACKETSHARE_EMAIL=
-PACKETSHARE_PASSWORD=
-
-# ------------------------------------------------------------------------------
-# 8. Repocket - Minimal Payout: $20 (PayPal)
-# DAFTAR: https://link.repocket.co/hr8i
+# 7. Repocket - Minimal Payout: $20 (PayPal)
+# DAFTAR: https://repocket.com/
 # ------------------------------------------------------------------------------
 REPOCKET_EMAIL=
 REPOCKET_API_KEY=

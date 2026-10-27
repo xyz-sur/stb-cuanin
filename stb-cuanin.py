@@ -76,13 +76,6 @@ SERVICES_META = {
         "ref_url": "https://earn.fm/ref/TERNKIO4",
         "description": "Proyek bandwidth sharing terpercaya & stabil."
     },
-    "packetshare": {
-        "name": "PacketShare",
-        "min_payout": "$10",
-        "methods": "PayPal, Crypto",
-        "ref_url": "https://www.packetshare.io/?code=A260871CFD822E35",
-        "description": "Tarif per GB bersaing untuk IP residensial."
-    },
     "repocket": {
         "name": "Repocket",
         "min_payout": "$20",
@@ -251,7 +244,7 @@ def get_fleet_active_services(dev_vault=None):
         pass
     return [
         "pawns", "packetstream", "earnapp", "honeygain",
-        "traffmonetizer", "earnfm", "packetshare", "repocket"
+        "traffmonetizer", "earnfm", "repocket"
     ]
 
 def resolve_credentials():
@@ -313,15 +306,6 @@ def resolve_credentials():
     resolved["earnfm"] = {
         "token": efm_token,
         "mode": efm_m if efm_token else "empty"
-    }
-
-    # PacketShare
-    psh_email, psh_em_m = get_val("PACKETSHARE_EMAIL", "packetshare_email")
-    psh_pass, psh_pa_m = get_val("PACKETSHARE_PASSWORD", "packetshare_password")
-    resolved["packetshare"] = {
-        "email": psh_email,
-        "password": psh_pass,
-        "mode": "user" if psh_em_m == "user" else ("default" if psh_email and psh_pass else "empty")
     }
 
     # Repocket
@@ -417,18 +401,7 @@ def generate_docker_compose():
             "cpus": 0.5
         }
 
-    # 7. PacketShare
-    if "packetshare" in active_services and creds["packetshare"]["email"] and creds["packetshare"]["password"]:
-        services["packetshare"] = {
-            "container_name": f"{hostname}_packetshare",
-            "image": "packetshare/packetshare:latest",
-            "restart": "always",
-            "command": f"-accept-tos -email={creds['packetshare']['email']} -password={creds['packetshare']['password']}",
-            "mem_limit": "80m",
-            "cpus": 0.5
-        }
-
-    # 8. Repocket
+    # 7. Repocket
     if "repocket" in active_services and creds["repocket"]["email"] and creds["repocket"]["api_key"]:
         services["repocket"] = {
             "container_name": f"{hostname}_repocket",
@@ -786,7 +759,7 @@ HTML_PAGE = """<!DOCTYPE html>
           <div class="form-section">
             <div class="form-section-title">
               <span>1. Pawns.app (IPRoyal)</span>
-              <a href="https://pawns.app?r=MiNe" target="_blank" class="btn btn-dark" style="font-size:0.75rem; padding:4px 10px;">Daftar Akun</a>
+              <a href="https://pawns.app/?r=16604653" target="_blank" class="btn btn-dark" style="font-size:0.75rem; padding:4px 10px;">Daftar Akun</a>
             </div>
             <div class="form-section-desc">Min Payout $5 (PayPal, Crypto)</div>
             <div class="form-row">
@@ -799,7 +772,7 @@ HTML_PAGE = """<!DOCTYPE html>
           <div class="form-section">
             <div class="form-section-title">
               <span>2. PacketStream</span>
-              <a href="https://packetstream.io/?psr=3zSD" target="_blank" class="btn btn-dark" style="font-size:0.75rem; padding:4px 10px;">Daftar Akun</a>
+              <a href="https://packetstream.io/share-bandwidth/?psr=15mskkd307" target="_blank" class="btn btn-dark" style="font-size:0.75rem; padding:4px 10px;">Daftar Akun</a>
             </div>
             <div class="form-section-desc">Min Payout $5 (PayPal). Masukkan CID (ID Numerik dari script install PacketStream).</div>
             <div class="form-row">
@@ -811,7 +784,7 @@ HTML_PAGE = """<!DOCTYPE html>
           <div class="form-section">
             <div class="form-section-title">
               <span>3. Honeygain</span>
-              <a href="https://r.honeygain.me/MINDL15721" target="_blank" class="btn btn-dark" style="font-size:0.75rem; padding:4px 10px;">Daftar Akun (Bonus $3)</a>
+              <a href="https://join.honeygain.com/T3RNA0D471" target="_blank" class="btn btn-dark" style="font-size:0.75rem; padding:4px 10px;">Daftar Akun (Bonus $3)</a>
             </div>
             <div class="form-section-desc">Min Payout $0 via JumpTask. Wajib akun mandiri (bukan Google SSO).</div>
             <div class="form-row">
@@ -824,7 +797,7 @@ HTML_PAGE = """<!DOCTYPE html>
           <div class="form-section">
             <div class="form-section-title">
               <span>4. TraffMonetizer</span>
-              <a href="https://traffmonetizer.com/?aff=366499" target="_blank" class="btn btn-dark" style="font-size:0.75rem; padding:4px 10px;">Daftar Akun</a>
+              <a href="https://traffmonetizer.com/?aff=2128139" target="_blank" class="btn btn-dark" style="font-size:0.75rem; padding:4px 10px;">Daftar Akun</a>
             </div>
             <div class="form-section-desc">Min Payout $10 USDT TRC-20 ke Indodax/Tokocrypto. Ambil token dari dashboard TraffMonetizer.</div>
             <div class="form-row">
@@ -836,7 +809,7 @@ HTML_PAGE = """<!DOCTYPE html>
           <div class="form-section">
             <div class="form-section-title">
               <span>5. EarnFM</span>
-              <a href="https://earn.fm/ref/MATTTAV6" target="_blank" class="btn btn-dark" style="font-size:0.75rem; padding:4px 10px;">Daftar Akun</a>
+              <a href="https://earn.fm/ref/TERNKIO4" target="_blank" class="btn btn-dark" style="font-size:0.75rem; padding:4px 10px;">Daftar Akun</a>
             </div>
             <div class="form-section-desc">Min Payout $15 (USDT/Crypto). Masukkan API Key dari dashboard EarnFM.</div>
             <div class="form-row">
@@ -844,24 +817,11 @@ HTML_PAGE = """<!DOCTYPE html>
             </div>
           </div>
 
-          <!-- PacketShare -->
-          <div class="form-section">
-            <div class="form-section-title">
-              <span>6. PacketShare</span>
-              <a href="https://www.packetshare.io/?code=A260871CFD822E35" target="_blank" class="btn btn-dark" style="font-size:0.75rem; padding:4px 10px;">Daftar Akun</a>
-            </div>
-            <div class="form-section-desc">Min Payout $10 (PayPal/Crypto).</div>
-            <div class="form-row">
-              <div class="form-group"><label>Email</label><input type="email" id="cfg_PACKETSHARE_EMAIL" class="form-input" placeholder="email@gmail.com"></div>
-              <div class="form-group"><label>Password</label><input type="password" id="cfg_PACKETSHARE_PASSWORD" class="form-input" placeholder="Password PacketShare"></div>
-            </div>
-          </div>
-
           <!-- Repocket -->
           <div class="form-section">
             <div class="form-section-title">
-              <span>7. Repocket</span>
-              <a href="https://link.repocket.co/hr8i" target="_blank" class="btn btn-dark" style="font-size:0.75rem; padding:4px 10px;">Daftar Akun (Bonus $5)</a>
+              <span>6. Repocket</span>
+              <a href="https://repocket.com/" target="_blank" class="btn btn-dark" style="font-size:0.75rem; padding:4px 10px;">Daftar Akun (Bonus $5)</a>
             </div>
             <div class="form-section-desc">Min Payout $20 (PayPal). Masukkan Email dan API Key dari tab SDK dashboard Repocket.</div>
             <div class="form-row">
@@ -1027,7 +987,7 @@ HTML_PAGE = """<!DOCTYPE html>
       const keys = [
         "PAWNS_EMAIL", "PAWNS_PASSWORD", "PACKETSTREAM_CID",
         "HONEYGAIN_EMAIL", "HONEYGAIN_PASSWORD", "TRAFFMONETIZER_TOKEN",
-        "EARNFM_TOKEN", "PACKETSHARE_EMAIL", "PACKETSHARE_PASSWORD",
+        "EARNFM_TOKEN",
         "REPOCKET_EMAIL", "REPOCKET_API_KEY"
       ];
       const payload = {};

@@ -132,9 +132,11 @@ else
   cd "$INSTALL_DIR"
 fi
 
-# Set permission
+# Set permission ketat (Zero-Trust Security)
 chmod +x stb-cuanin.py install.sh update.sh 2>/dev/null || true
 mkdir -p "$INSTALL_DIR/.data/earnapp"
+chmod 700 "$INSTALL_DIR/.data"
+[ -f "$INSTALL_DIR/docker-compose.generated.yml" ] && chmod 600 "$INSTALL_DIR/docker-compose.generated.yml"
 
 if [ -n "$DEV_KEY" ]; then
   echo -e "${YELLOW}[*] Menyimpan Fleet Key ke $INSTALL_DIR/.env (chmod 600)...${NC}"

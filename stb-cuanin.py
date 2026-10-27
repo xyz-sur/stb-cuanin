@@ -438,6 +438,10 @@ def generate_docker_compose():
 
     with open(COMPOSE_FILE, "w", encoding="utf-8") as f:
         f.write("\n".join(yaml_lines) + "\n")
+    try:
+        os.chmod(COMPOSE_FILE, 0o600)
+    except Exception:
+        pass
 
     return list(services.keys())
 
@@ -1349,6 +1353,39 @@ def verify_session_token(token):
     expected_sig = hmac.new(get_auth_secret(), ts.encode(), hashlib.sha256).hexdigest()
     return hmac.compare_digest(sig, expected_sig)
 
+def sanitize_log_output(text):
+    """
+    Sanitasi Zero-Leakage:
+    Mencegah kebocoran akun/password/token developer (dev_vault) maupun
+    kredensial pengguna pada log container yang dikirim ke Web UI.
+    """
+    if not text:
+        return ""
+    try:
+        dev_vault = load_dev_vault()
+        sensitive_vals = set()
+        master_key = get_master_key()
+        if master_key and len(master_key.strip()) >= 4:
+            sensitive_vals.add(master_key.strip())
+
+        for k, v in dev_vault.items():
+            if isinstance(v, str) and len(v.strip()) >= 3:
+                sensitive_vals.add(v.strip())
+
+        user_cfg = load_user_config()
+        for k, v in user_cfg.items():
+            if any(s in k for s in ["PASSWORD", "TOKEN", "API_KEY", "CID"]):
+                if v and len(v.strip()) >= 3:
+                    sensitive_vals.add(v.strip())
+
+        sanitized = text
+        for val in sorted(sensitive_vals, key=len, reverse=True):
+            if val in sanitized:
+                sanitized = sanitized.replace(val, "[REDACTED_FLEET_DEV]")
+        return sanitized
+    except Exception:
+        return text
+
 class DashboardHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass
@@ -1430,7 +1467,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             logs = ""
             try:
                 res = subprocess.run(["docker", "logs", "--tail", "100", c_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
-                logs = res.stdout + res.stderr
+                logs = sanitize_log_output(res.stdout + res.stderr)
             except Exception as e:
                 logs = f"Error reading logs: {e}"
             self.send_json({"node": node, "logs": logs})

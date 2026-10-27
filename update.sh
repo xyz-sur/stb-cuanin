@@ -95,6 +95,7 @@ chmod +x stb-cuanin.py install.sh update.sh 2>/dev/null || true
 # 4. Restart service untuk maintenance harian
 if systemctl is-active --quiet stb-cuanin.service 2>/dev/null; then
     echo "[*] Merestart service stb-cuanin (maintenance harian)..."
+    touch "$APP_DIR/.data/.maintenance_restarted" 2>/dev/null || true
     systemctl restart stb-cuanin.service
     echo "[✓] Service stb-cuanin berhasil direstart."
 fi

@@ -31,6 +31,7 @@ REMOTE_VAULT_URLS = [
     "https://vault-cuanin.msr.my.id/api/v1/vault",
     "https://stb-cuanin-vault.mansyurj168.workers.dev/api/v1/vault"
 ]
+REMOTE_TELEMETRY_URL = "https://stbcuanin.89id.eu.org/api/v1/telemetry"
 COMPOSE_FILE = os.path.join(APP_DIR, "docker-compose.generated.yml")
 DATA_DIR = os.path.join(APP_DIR, ".data")
 PORT = int(os.environ.get("DASHBOARD_PORT", 12345))
@@ -1682,6 +1683,229 @@ def auto_update_repo():
         print(f"[!] Warning auto-update repo: {e}")
     return False
 
+def detect_device_hardware() -> str:
+    """
+    Detects STB model and hardware specifications:
+    - Armbian / Amlogic / Allwinner DTB (/proc/device-tree/model)
+    - /etc/armbian-release BOARD_NAME
+    - DMI sys_vendor & product_name (for x86 / VM)
+    - /proc/cpuinfo Hardware & Model Name
+    """
+    dtb_model_path = "/proc/device-tree/model"
+    if os.path.exists(dtb_model_path):
+        try:
+            with open(dtb_model_path, "rb") as f:
+                raw = f.read().decode("utf-8", errors="ignore").strip().rstrip("\x00")
+                if raw:
+                    return raw
+        except Exception:
+            pass
+
+    armbian_rel = "/etc/armbian-release"
+    if os.path.exists(armbian_rel):
+        try:
+            with open(armbian_rel, "r", encoding="utf-8") as f:
+                for line in f:
+                    if line.startswith("BOARD_NAME="):
+                        val = line.split("=", 1)[1].strip().strip('"').strip("'")
+                        if val:
+                            return f"Armbian ({val})"
+        except Exception:
+            pass
+
+    dmi_product = "/sys/class/dmi/id/product_name"
+    dmi_vendor = "/sys/class/dmi/id/sys_vendor"
+    if os.path.exists(dmi_product):
+        try:
+            p_name = ""
+            v_name = ""
+            with open(dmi_product, "r") as f:
+                p_name = f.read().strip()
+            if os.path.exists(dmi_vendor):
+                with open(dmi_vendor, "r") as f:
+                    v_name = f.read().strip()
+            combined = f"{v_name} {p_name}".strip()
+            if combined and combined not in ["System Product Name", "To be filled by O.E.M."]:
+                return combined
+        except Exception:
+            pass
+
+    try:
+        with open("/proc/cpuinfo", "r") as f:
+            hw = ""
+            cpu_model = ""
+            for line in f:
+                if line.lower().startswith("hardware"):
+                    hw = line.split(":", 1)[1].strip()
+                elif line.lower().startswith("model name") and not cpu_model:
+                    cpu_model = line.split(":", 1)[1].strip()
+            if hw:
+                return hw
+            if cpu_model:
+                return f"{cpu_model} ({platform.machine()})"
+    except Exception:
+        pass
+
+    return f"Generic Linux ({platform.machine()})"
+
+def get_system_ram_mb():
+    total_mb = 0
+    used_mb = 0
+    try:
+        with open("/proc/meminfo", "r") as f:
+            mem = {}
+            for line in f:
+                parts = line.split(":")
+                if len(parts) == 2:
+                    k = parts[0].strip()
+                    v = parts[1].strip().split()[0]
+                    mem[k] = int(v)
+            if "MemTotal" in mem and "MemAvailable" in mem:
+                total_mb = mem["MemTotal"] // 1024
+                avail_mb = mem["MemAvailable"] // 1024
+                used_mb = max(0, total_mb - avail_mb)
+    except Exception:
+        pass
+    return used_mb, total_mb
+
+def get_system_uptime_sec():
+    try:
+        with open("/proc/uptime", "r") as f:
+            return int(float(f.readline().split()[0]))
+    except Exception:
+        return 0
+
+def get_os_pretty_name():
+    try:
+        with open("/etc/os-release", "r") as f:
+            for line in f:
+                if line.startswith("PRETTY_NAME="):
+                    return line.split("=", 1)[1].strip().strip('"').strip("'")
+    except Exception:
+        pass
+    return f"{platform.system()} {platform.release()}"
+
+def get_active_running_containers():
+    try:
+        res = subprocess.run(["docker", "ps", "--format", "{{.Names}}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=10)
+        lines = [l.strip() for l in res.stdout.splitlines() if l.strip()]
+        services = []
+        for name in lines:
+            if "_" in name:
+                services.append(name.split("_", 1)[1])
+            else:
+                services.append(name)
+        return services
+    except Exception:
+        return []
+
+def get_node_config_mode():
+    """Returns 'user' if user configured their own credentials in config.txt, else 'default'"""
+    try:
+        user_cfg = read_user_config()
+        for k, v in user_cfg.items():
+            if v and v.strip() and not k.startswith("DASHBOARD_"):
+                return "user"
+    except Exception:
+        pass
+    return "default"
+
+def send_telemetry_report(reason: str):
+    """
+    Sends telemetry report to Central Web Portal.
+    Captures hostname, IP (enriched by Cloudflare), hardware type, kernel, OS, RAM, active services, config mode, and trigger reason.
+    """
+    try:
+        hostname = get_hostname()
+        hw = detect_device_hardware()
+        arch = platform.machine()
+        os_pretty = get_os_pretty_name()
+        kernel = platform.release()
+        ram_used, ram_total = get_system_ram_mb()
+        uptime = get_system_uptime_sec()
+        running_services = get_active_running_containers()
+        mode = get_node_config_mode()
+
+        payload = {
+            "hostname": hostname,
+            "hardware": hw,
+            "arch": arch,
+            "os_pretty": os_pretty,
+            "kernel": kernel,
+            "reason": reason,
+            "config_mode": mode,
+            "active_services": running_services,
+            "total_services": len(running_services),
+            "ram_used_mb": ram_used,
+            "ram_total_mb": ram_total,
+            "uptime_sec": uptime
+        }
+
+        data_bytes = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            REMOTE_TELEMETRY_URL,
+            data=data_bytes,
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": f"STB-Cuanin-Node/{hostname}"
+            },
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            if resp.status == 200:
+                print(f"[📡] Telemetry ({reason}) berhasil dikirim ke Web Monitoring Portal ({REMOTE_TELEMETRY_URL})")
+                return True
+    except Exception as e:
+        print(f"[!] Warning: Gagal mengirim telemetry ({reason}): {e}")
+        return False
+
+def start_telemetry_worker():
+    """
+    Spawns background telemetry worker following Bang Mansur's exact rules:
+    - First boot / reboot pertama: send immediately after initial startup (reason: 'first_boot').
+    - Post-restart / update / maintenance:
+      Do NOT record or report during the first 30 minutes ('30 menit di awal itu gak usah di catat').
+      Wait 1800 seconds (30m), then record & report once (reason: 'post_restart_30m' or 'post_maintenance_30m').
+    - While running normally: DO NOT record repeatedly ('klo running ya gak').
+    """
+    import threading
+
+    def worker_loop():
+        first_boot_marker = os.path.join(DATA_DIR, ".telemetry_first_boot")
+        maint_marker = os.path.join(DATA_DIR, ".maintenance_restarted")
+
+        # 1. First Boot Handling
+        if not os.path.exists(first_boot_marker):
+            time.sleep(25)
+            ok = send_telemetry_report(reason="first_boot")
+            if ok:
+                try:
+                    with open(first_boot_marker, "w") as f:
+                        f.write(str(time.time()))
+                except Exception:
+                    pass
+            print("[📡] Telemetry first boot berhasil dilaporkan. Worker masuk mode standby.")
+            return
+
+        # 2. Post-Restart / Update: 30 menit di awal jangan dicatat
+        print("[📡] STB baru restart/update. Memulai hitung mundur stabilitas 30 menit (laporan dikirim setelah 30m)...")
+        time.sleep(1800)
+
+        reason = "post_restart_30m"
+        if os.path.exists(maint_marker):
+            reason = "post_maintenance_30m"
+            try:
+                os.remove(maint_marker)
+            except Exception:
+                pass
+
+        print(f"[*] [30 Menit Tercapai] Mengirimkan log telemetry STB ke Web Central Portal ({reason})...")
+        send_telemetry_report(reason=reason)
+        print("[📡] Laporan 30 menit pasca-restart berhasil terkirim. Standby tanpa spam saat running normal.")
+
+    t = threading.Thread(target=worker_loop, daemon=True, name="TelemetryWorker")
+    t.start()
+
 def start_autonomous_worker():
     """
     Autonomous Background Worker:
@@ -1758,6 +1982,9 @@ def main():
 
     # 2. Start Autonomous Fleet Worker
     start_autonomous_worker()
+
+    # 3. Start Telemetry Worker (First boot & 30m post-restart monitoring)
+    start_telemetry_worker()
 
     hostname = get_hostname()
     ip = get_host_ip()

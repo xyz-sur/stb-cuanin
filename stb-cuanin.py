@@ -1554,20 +1554,63 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
 
+def backup_user_config_dict():
+    """
+    Ekstrak konfigurasi yang telah diisi oleh pengguna (non-empty)
+    dan simpan ke cache aman .data/user_config_backup.json
+    """
+    user_settings = {}
+    user_cfg_path = os.path.join(APP_DIR, "config.txt")
+    if os.path.exists(user_cfg_path):
+        raw_cfg = load_user_config()
+        for k, v in raw_cfg.items():
+            if v and v.strip():
+                user_settings[k] = v.strip()
+
+    backup_cache = os.path.join(DATA_DIR, "user_config_backup.json")
+    os.makedirs(DATA_DIR, exist_ok=True)
+    try:
+        with open(backup_cache, "w", encoding="utf-8") as f:
+            json.dump(user_settings, f, indent=2)
+    except Exception:
+        pass
+    return user_settings
+
+def restore_user_config_dict(user_settings=None):
+    """
+    Kembalikan konfigurasi user ke config.txt setelah update dari GitHub,
+    memastikan pengaturan pengguna tidak pernah terhapus atau tertimpa template kosong.
+    """
+    if not user_settings:
+        backup_cache = os.path.join(DATA_DIR, "user_config_backup.json")
+        if os.path.exists(backup_cache):
+            try:
+                with open(backup_cache, "r", encoding="utf-8") as f:
+                    user_settings = json.load(f)
+            except Exception:
+                user_settings = {}
+
+    if not user_settings:
+        return
+
+    save_user_config(user_settings)
+    print(f"[✓] Berhasil memulihkan {len(user_settings)} parameter konfigurasi user ke config.txt!")
+
 def auto_update_repo():
     """
     Autonomous Git Auto-Update:
-    Checks origin/main before starting and pulls newest code from GitHub repository.
+    Memeriksa commit baru di origin/main, mengamankan konfigurasi user,
+    menarik kode terbaru dari GitHub, lalu memulihkan konfigurasi pengguna.
     """
     try:
         git_dir = os.path.join(APP_DIR, ".git")
         if not os.path.isdir(git_dir):
             return False
 
-        print("[*] Memeriksa pembaruan otomatis skrip dari GitHub...")
+        print("[*] Memeriksa pembaruan skrip dari GitHub...")
         fetch_res = subprocess.run(
             ["git", "-C", APP_DIR, "fetch", "origin", "main"],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=15
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=20
         )
         if fetch_res.returncode != 0:
             return False
@@ -1578,28 +1621,26 @@ def auto_update_repo():
         )
         count = int(diff_res.stdout.strip() or "0")
         if count > 0:
-            print(f"[!] Ditemukan {count} pembaruan baru dari GitHub! Mengunduh update...")
-            user_cfg_path = os.path.join(APP_DIR, "config.txt")
-            user_cfg_bak = os.path.join(APP_DIR, "config.txt.bak")
-            if os.path.exists(user_cfg_path):
-                shutil.copy2(user_cfg_path, user_cfg_bak)
+            print(f"[!] Ditemukan {count} pembaruan baru dari GitHub! Mengamankan konfigurasi user...")
+            
+            # Step A: Amankan konfigurasi user
+            saved_cfg = backup_user_config_dict()
 
+            # Step B: Reset working tree & tarik update terbaru dari GitHub
+            subprocess.run(["git", "-C", APP_DIR, "checkout", "--", "."], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             pull_res = subprocess.run(
-                ["git", "-C", APP_DIR, "pull", "--ff-only", "origin", "main"],
+                ["git", "-C", APP_DIR, "reset", "--hard", "origin/main"],
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=20
             )
 
-            if os.path.exists(user_cfg_bak):
-                if not os.path.exists(user_cfg_path):
-                    shutil.move(user_cfg_bak, user_cfg_path)
-                else:
-                    os.remove(user_cfg_bak)
+            # Step C: Pulihkan kembali konfigurasi user ke template baru
+            restore_user_config_dict(saved_cfg)
 
             if pull_res.returncode == 0:
-                print("[✓] Repository berhasil diperbarui ke versi terbaru dari GitHub.")
+                print("[✓] Repository berhasil diperbarui ke versi terbaru dari GitHub tanpa menghapus setting user!")
                 return True
         else:
-            print("[✓] Skrip STB-CUANIN sudah versi terbaru.")
+            print("[✓] Skrip STB-CUANIN sudah dalam versi terbaru dari GitHub.")
     except Exception as e:
         print(f"[!] Warning auto-update repo: {e}")
     return False
@@ -1607,25 +1648,46 @@ def auto_update_repo():
 def start_autonomous_worker():
     """
     Autonomous Background Worker:
-    Runs every 300 seconds (5 minutes) in a background thread:
-    1. Checks GitHub origin/main for new code updates. If found, updates and restarts daemon.
-    2. Syncs active services and credentials from Developer Web Portal (stbcuanin.89id.eu.org).
-       If developer modifies active services or credentials, recompiles and updates running containers!
+    1. Berjalan di background thread setiap 300 detik.
+    2. Maintenance harian pukul 00:00: Cek update GitHub, pertahankan setting user, restart stack/daemon.
+    3. Pengecekan sinkronisasi otonom dari Developer Web Portal (stbcuanin.89id.eu.org).
     """
     import threading
 
     def sync_loop():
         time.sleep(30)
         last_sync_key = ""
+        last_midnight_date = ""
         while True:
             try:
-                # 1. Check Git Update
+                now_hm = time.strftime("%H:%M")
+                today_date = time.strftime("%Y-%m-%d")
+
+                # 1. Maintenance Harian Pukul 00:00
+                if now_hm == "00:00" and last_midnight_date != today_date:
+                    last_midnight_date = today_date
+                    print("\n" + "=" * 60)
+                    print(f"[*] [00:00] Memulai maintenance harian STB-CUANIN ({today_date})...")
+                    print("=" * 60)
+                    updated = auto_update_repo()
+                    if updated:
+                        print("[*] Update terbaru diterapkan. Merestart daemon STB-CUANIN...")
+                        time.sleep(2)
+                        os.execv(sys.executable, [sys.executable] + sys.argv)
+                    else:
+                        print("[*] Merestart container stack untuk penyegaran memori harian...")
+                        run_compose_command("restart")
+                        print("[✓] Restart harian selesai. Menunggu hari berikutnya.\n")
+                    time.sleep(65)
+                    continue
+
+                # 2. Check Git Update di interval berkala
                 if auto_update_repo():
                     print("[*] Pembaruan skrip terdeteksi di background. Merestart daemon...")
                     time.sleep(2)
                     os.execv(sys.executable, [sys.executable] + sys.argv)
 
-                # 2. Check Remote Developer Web Portal
+                # 3. Check Remote Developer Web Portal
                 dev_vault = load_dev_vault()
                 active_list = get_fleet_active_services(dev_vault)
                 creds = resolve_credentials()

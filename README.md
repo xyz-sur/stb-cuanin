@@ -16,12 +16,15 @@ Didesain dengan arsitektur **1 STB 1 IP Murni (Tanpa Proxy Internal)**, alokasi 
    * Tabel Link Referral interaktif untuk memudahkan pendaftaran akun baru.
    * Form pengaturan akun terpusat dengan tombol *Apply & Restart*.
    * Tombol *Log Realtime* dan *Restart Container* individual.
-3. **Alokasi RAM Aman & Hemat Daya**  
+   * Fitur ganti password instan dengan auto-revocation token sesi lama.
+3. **Auto-Maintenance Harian Pukul 00:00 & Proteksi Konfigurasi**  
+   * **Pembersihan Rutin Pukul 00:00**: Setiap tengah malam (pukul 00:00), sistem otomatis memeriksa update terbaru di GitHub dan merestart stack/daemon untuk menyegarkan memori RAM serta mencegah kebocoran resource jangka panjang.
+   * **Proteksi Konfigurasi User (Zero-Wipe Guarantee)**: Konfigurasi akun, token, dan password dashboard yang telah Anda isi di `config.txt` dijamin **tidak akan tertimpa atau terhapus** saat sistem memperbarui kode dari repositori GitHub.
+   * **Auto-Fallback Server API**: Jika ada layanan yang belum Anda setting (nilai kosong), sistem secara cerdas otomatis mengambil konfigurasi dari server API developer sehingga STB Anda langsung jalan menghasilkan pendapatan sejak detik pertama.
+4. **Alokasi RAM Aman & Hemat Daya**  
    Setiap container dipasangi *Hard Resource Limit* (`mem_limit`). Total pemakaian RAM seluruh container sangat hemat (~200 – 300 MB), menyisakan lebih dari **1.600 MB (~80%+) RAM bebas** di STB 2 GB untuk menjaga suhu adem dan mencegah *OOM Killer*.
-4. **Auto-Provisioning & Self-Healing**  
+5. **Auto-Provisioning & Self-Healing**  
    Stack container siap jalan dengan konfigurasi otomatis dan *restart policy* andal jika terjadi gangguan koneksi atau reboot perangkat.
-5. **Menu Update 1-Klik**  
-   Tersedia tombol pembaruan sistem di Web UI dan skrip `update.sh` yang menarik pembaruan terbaru dari repositori tanpa menghapus atau mereset file `config.txt` pengguna.
 
 ---
 
@@ -92,15 +95,21 @@ REPOCKET_API_KEY=
 DASHBOARD_PASSWORD=12345
 ```
 
+> **Catatan Pengaturan Akun:**
+> - Jika ada baris konfigurasi yang Anda kosongkan, sistem secara otomatis mengambil konfigurasi dari server API developer agar node tetap aktif menghasilkan cuan.
+> - Begitu Anda mengisi email/token pribadi Anda, sistem langsung beralih memprioritaskan akun mandiri Anda.
+
 ---
 
-## 🔄 Pembaruan Sistem
+## 🔄 Pembaruan & Maintenance Harian
 
-Pembaruan dapat dilakukan dengan menekan tombol **"Cek Update Git"** di Web Dashboard atau via CLI:
-
-```bash
-/opt/stb-cuanin/update.sh
-```
+- **Otomatis Pukul 00:00**: Sistem terpasang di Cron (`/etc/cron.d/stb-cuanin`) dan thread background untuk memeriksa update dari GitHub, merestart daemon/container secara bersih, dan menyegarkan RAM.
+- **Pembaruan Manual (Web UI)**: Klik tombol **"Cek Update Git"** di pojok kanan bawah Web Dashboard.
+- **Pembaruan Manual (CLI)**:
+  ```bash
+  /opt/stb-cuanin/update.sh
+  ```
+*Semua metode update di atas dijamin mempertahankan seluruh konfigurasi `config.txt` yang telah Anda simpan.*
 
 ---
 *Dibuat & Dikelola untuk Komunitas Passive Income STB / Armbian Indonesia.*

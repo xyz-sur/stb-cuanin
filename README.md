@@ -10,8 +10,8 @@ Didesain dengan arsitektur **1 STB 1 IP Murni (Tanpa Proxy Internal)**, alokasi 
 
 1. **1 STB 1 IP Direct Connection (No Proxy)**  
    Semua container berjalan langsung memanfaatkan IP publik utama perangkat tanpa overhead proxy lokal (menghilangkan bottleneck dan halaman proxy internal bawaan port 8081).
-2. **Dashboard Monitoring Real-Time (Port 12345)**  
-   Antarmuka web bertema *Cyberpunk Dark Theme* yang ringan (~15 MB RAM overhead) untuk:
+2. **Dashboard Monitoring Real-Time Terproteksi (Port 12345)**  
+   Antarmuka web bertema *Cyberpunk Dark Theme* yang ringan (~15 MB RAM overhead) dan terproteksi autentikasi password (**default: `12345`**) untuk mencegah akses lokal yang tidak diinginkan:
    * Memantau CPU, RAM, Uptime, dan status operasional setiap container node.
    * Tabel Link Referral interaktif untuk memudahkan pendaftaran akun baru.
    * Form pengaturan akun terpusat dengan tombol *Apply & Restart*.
@@ -51,6 +51,7 @@ Setelah instalasi selesai, buka browser Anda ke:
 ```text
 http://<IP_STB_ANDA>:12345
 ```
+*Gunakan password bawaan: `12345` (Dapat langsung diganti melalui tombol **🔑 Ganti Password** di dashboard atau melalui file `config.txt`).*
 
 ---
 
@@ -85,6 +86,10 @@ EARNFM_TOKEN=
 # DAFTAR: https://repocket.com/
 REPOCKET_EMAIL=
 REPOCKET_API_KEY=
+
+# 7. Keamanan Web Dashboard Monitoring (Port 12345)
+# Password default: 12345 (Dapat diubah untuk mengamankan akses dari jaringan lokal)
+DASHBOARD_PASSWORD=12345
 ```
 
 ---

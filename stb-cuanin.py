@@ -12,6 +12,8 @@ import time
 import socket
 import shutil
 import secrets
+import hmac
+import hashlib
 import platform
 import subprocess
 import urllib.request
@@ -31,7 +33,7 @@ REMOTE_VAULT_URLS = [
 ]
 COMPOSE_FILE = os.path.join(APP_DIR, "docker-compose.generated.yml")
 DATA_DIR = os.path.join(APP_DIR, ".data")
-PORT = 12345
+PORT = int(os.environ.get("DASHBOARD_PORT", 12345))
 
 SERVICES_META = {
     "pawns": {
@@ -670,6 +672,13 @@ HTML_PAGE = """<!DOCTYPE html>
     .form-input { background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 0.9rem; transition: 0.2s; }
     .form-input:focus { border-color: var(--primary); outline: none; }
 
+    /* Lock Overlay */
+    .lock-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 15, 25, 0.94); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; }
+    .lock-card { background: #151d2f; border: 1px solid #232f48; border-radius: 16px; padding: 32px 28px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
+    .lock-icon { background: linear-gradient(135deg, #3b82f6, #10b981); color: #fff; width: 56px; height: 56px; border-radius: 14px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 8px 20px rgba(59,130,246,0.4); }
+    .lock-title { font-size: 1.35rem; font-weight: 700; color: #fff; margin-bottom: 6px; }
+    .lock-desc { font-size: 0.85rem; color: #9ca3af; margin-bottom: 22px; }
+
     /* Modal */
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 999; align-items: center; justify-content: center; }
     .modal-content { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; width: 90%; max-width: 800px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
@@ -688,9 +697,13 @@ HTML_PAGE = """<!DOCTYPE html>
         <div class="brand-sub">1 STB 1 IP Passive Income Node Manager</div>
       </div>
     </div>
-    <div class="host-badge">
-      <div class="status-dot"></div>
-      <span id="txt-hostname">STB</span> (<span id="txt-ip">0.0.0.0</span>) | <span id="txt-arch">arm64</span>
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+      <div class="host-badge">
+        <div class="status-dot"></div>
+        <span id="txt-hostname">STB</span> (<span id="txt-ip">0.0.0.0</span>) | <span id="txt-arch">arm64</span>
+      </div>
+      <button class="btn btn-dark" onclick="openPasswordModal()" style="font-size: 0.8rem; padding: 6px 12px;">🔑 Ganti Password</button>
+      <button class="btn btn-dark" onclick="handleLogout()" style="font-size: 0.8rem; padding: 6px 12px; color: #f87171;">🚪 Logout</button>
     </div>
   </header>
 
@@ -830,6 +843,17 @@ HTML_PAGE = """<!DOCTYPE html>
             </div>
           </div>
 
+          <!-- Keamanan Dashboard -->
+          <div class="form-section">
+            <div class="form-section-title">
+              <span>7. Keamanan Web Dashboard (Port 12345)</span>
+            </div>
+            <div class="form-section-desc">Lindungi dashboard dari user jail di WiFi/LAN lokal Anda. Password default: <code>12345</code>.</div>
+            <div class="form-row">
+              <div class="form-group"><label>Password Dashboard Monitoring</label><input type="password" id="cfg_DASHBOARD_PASSWORD" class="form-input" placeholder="Default: 12345"></div>
+            </div>
+          </div>
+
           <div style="margin-top: 30px; display: flex; justify-content: flex-end;">
             <button type="submit" class="btn btn-success" style="font-size: 1rem; padding: 12px 28px;">💾 Simpan & Terapkan Perubahan</button>
           </div>
@@ -857,6 +881,51 @@ HTML_PAGE = """<!DOCTYPE html>
     </div>
   </div>
 
+  <!-- Lock Screen Overlay -->
+  <div id="lock-overlay" class="lock-overlay">
+    <div class="lock-card">
+      <div class="lock-icon">🔒</div>
+      <div class="lock-title">STB-CUANIN</div>
+      <div class="lock-desc">Dashboard Terproteksi &bull; Masukkan Password</div>
+      <form onsubmit="handleLogin(event)">
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 0.75rem; font-weight: 600; color: #9ca3af; margin-bottom: 6px; text-transform: uppercase;">Password Dashboard</label>
+          <input type="password" id="login-pwd" class="form-input" placeholder="Default: 12345" style="width: 100%; font-size: 1rem; padding: 12px; text-align: center;" required autofocus>
+        </div>
+        <div id="login-err" style="color: #ef4444; font-size: 0.82rem; margin-bottom: 14px; display: none; background: rgba(239,68,68,0.1); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(239,68,68,0.2);"></div>
+        <button type="submit" id="btn-login-submit" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 0.95rem; justify-content: center;">🔓 Buka Dashboard</button>
+      </form>
+      <div style="margin-top: 20px; font-size: 0.78rem; color: #64748b;">
+        Password default: <code style="color: #34d399; background: rgba(52,211,153,0.1); padding: 2px 6px; border-radius: 4px;">12345</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Ganti Password -->
+  <div id="pwd-modal" class="modal">
+    <div class="modal-content" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3>🔑 Ubah Password Dashboard</h3>
+        <button class="btn btn-dark" onclick="closePasswordModal()" style="padding: 4px 10px;">✕ Tutup</button>
+      </div>
+      <form onsubmit="handleChangePassword(event)" style="padding: 20px;">
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+          Ganti password default (12345) untuk mengamankan STB dari akses tak dikenal di WiFi/LAN lokal Anda.
+        </div>
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label>Password Saat Ini</label>
+          <input type="password" id="pwd-current" class="form-input" placeholder="Masukkan password sekarang" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label>Password Baru</label>
+          <input type="password" id="pwd-new" class="form-input" placeholder="Minimal 3 karakter" required minlength="3">
+        </div>
+        <div id="pwd-change-msg" style="font-size: 0.82rem; margin-bottom: 14px; display: none;"></div>
+        <button type="submit" id="btn-save-pwd" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 10px;">Simpan Password Baru</button>
+      </form>
+    </div>
+  </div>
+
   <!-- Modal Log -->
   <div id="log-modal" class="modal">
     <div class="modal-content">
@@ -874,6 +943,136 @@ HTML_PAGE = """<!DOCTYPE html>
   <script>
     let activeLogNode = "";
 
+    function getStoredToken() {
+      return sessionStorage.getItem('stb_token') || '';
+    }
+
+    function setStoredToken(token) {
+      if (token) sessionStorage.setItem('stb_token', token);
+      else sessionStorage.removeItem('stb_token');
+    }
+
+    function authHeaders(extra = {}) {
+      const headers = { ...extra };
+      const token = getStoredToken();
+      if (token) {
+        headers['Authorization'] = 'Bearer ' + token;
+        headers['X-Dashboard-Token'] = token;
+      }
+      return headers;
+    }
+
+    function showLockScreen() {
+      const overlay = document.getElementById('lock-overlay');
+      if (overlay) {
+        overlay.style.display = 'flex';
+        document.getElementById('login-pwd').focus();
+      }
+    }
+
+    function hideLockScreen() {
+      const overlay = document.getElementById('lock-overlay');
+      if (overlay) overlay.style.display = 'none';
+      const err = document.getElementById('login-err');
+      if (err) err.style.display = 'none';
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const pwd = document.getElementById('login-pwd').value;
+      const errEl = document.getElementById('login-err');
+      const btn = document.getElementById('btn-login-submit');
+      errEl.style.display = 'none';
+      btn.textContent = 'Memverifikasi...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pwd })
+        });
+        const out = await res.json();
+        if (out.success) {
+          setStoredToken(out.token);
+          hideLockScreen();
+          document.getElementById('login-pwd').value = '';
+          fetchStatus();
+        } else {
+          errEl.textContent = out.message || 'Password salah!';
+          errEl.style.display = 'block';
+        }
+      } catch (err) {
+        errEl.textContent = 'Gagal menghubungi server: ' + err;
+        errEl.style.display = 'block';
+      } finally {
+        btn.textContent = '🔓 Buka Dashboard';
+        btn.disabled = false;
+      }
+    }
+
+    async function handleLogout() {
+      if (!confirm("Logout dari dashboard?")) return;
+      try {
+        await fetch('/api/auth/logout', { method: 'POST', headers: authHeaders() });
+      } catch (e) {}
+      setStoredToken('');
+      showLockScreen();
+    }
+
+    function openPasswordModal() {
+      document.getElementById('pwd-current').value = '';
+      document.getElementById('pwd-new').value = '';
+      const msg = document.getElementById('pwd-change-msg');
+      msg.style.display = 'none';
+      document.getElementById('pwd-modal').style.display = 'flex';
+      document.getElementById('pwd-current').focus();
+    }
+
+    function closePasswordModal() {
+      document.getElementById('pwd-modal').style.display = 'none';
+    }
+
+    async function handleChangePassword(e) {
+      e.preventDefault();
+      const current_password = document.getElementById('pwd-current').value;
+      const new_password = document.getElementById('pwd-new').value;
+      const msgEl = document.getElementById('pwd-change-msg');
+      const btn = document.getElementById('btn-save-pwd');
+      msgEl.style.display = 'none';
+      btn.textContent = 'Menyimpan...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/auth/change_password', {
+          method: 'POST',
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ current_password, new_password })
+        });
+        const out = await res.json();
+        if (out.success) {
+          if (out.token) setStoredToken(out.token);
+          msgEl.style.color = '#34d399';
+          msgEl.textContent = '✅ ' + (out.message || 'Password berhasil diperbarui!');
+          msgEl.style.display = 'block';
+          setTimeout(() => {
+            closePasswordModal();
+          }, 1500);
+        } else {
+          msgEl.style.color = '#ef4444';
+          msgEl.textContent = '❌ ' + (out.message || 'Gagal mengubah password!');
+          msgEl.style.display = 'block';
+        }
+      } catch (err) {
+        msgEl.style.color = '#ef4444';
+        msgEl.textContent = 'Error: ' + err;
+        msgEl.style.display = 'block';
+      } finally {
+        btn.textContent = 'Simpan Password Baru';
+        btn.disabled = false;
+      }
+    }
+
     function switchTab(tabId, btn) {
       document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
       document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -884,7 +1083,12 @@ HTML_PAGE = """<!DOCTYPE html>
 
     async function fetchStatus() {
       try {
-        const res = await fetch('/api/status');
+        const res = await fetch('/api/status', { headers: authHeaders() });
+        if (res.status === 401) {
+          showLockScreen();
+          return;
+        }
+        hideLockScreen();
         const data = await res.json();
         
         // Update header & sys stats
@@ -971,7 +1175,11 @@ HTML_PAGE = """<!DOCTYPE html>
 
     async function loadConfigValues() {
       try {
-        const res = await fetch('/api/config');
+        const res = await fetch('/api/config', { headers: authHeaders() });
+        if (res.status === 401) {
+          showLockScreen();
+          return;
+        }
         const cfg = await res.json();
         for (const [k, v] of Object.entries(cfg)) {
           const el = document.getElementById(`cfg_${k}`);
@@ -988,7 +1196,8 @@ HTML_PAGE = """<!DOCTYPE html>
         "PAWNS_EMAIL", "PAWNS_PASSWORD", "PACKETSTREAM_CID",
         "HONEYGAIN_EMAIL", "HONEYGAIN_PASSWORD", "TRAFFMONETIZER_TOKEN",
         "EARNFM_TOKEN",
-        "REPOCKET_EMAIL", "REPOCKET_API_KEY"
+        "REPOCKET_EMAIL", "REPOCKET_API_KEY",
+        "DASHBOARD_PASSWORD"
       ];
       const payload = {};
       keys.forEach(k => {
@@ -1001,9 +1210,13 @@ HTML_PAGE = """<!DOCTYPE html>
       try {
         const res = await fetch('/api/config', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify(payload)
         });
+        if (res.status === 401) {
+          showLockScreen();
+          return;
+        }
         const out = await res.json();
         alert(out.message || "Konfigurasi berhasil disimpan!");
         switchTab('tab-nodes', document.querySelectorAll('.tab-btn')[0]);
@@ -1016,7 +1229,11 @@ HTML_PAGE = """<!DOCTYPE html>
     async function actionAll(action) {
       if (!confirm(`Apakah Anda yakin ingin mengeksekusi '${action}' untuk semua node?`)) return;
       try {
-        const res = await fetch(`/api/nodes/${action}`, { method: 'POST' });
+        const res = await fetch(`/api/nodes/${action}`, { method: 'POST', headers: authHeaders() });
+        if (res.status === 401) {
+          showLockScreen();
+          return;
+        }
         const out = await res.json();
         alert(out.message);
         setTimeout(fetchStatus, 2000);
@@ -1029,9 +1246,13 @@ HTML_PAGE = """<!DOCTYPE html>
       try {
         const res = await fetch('/api/nodes/action', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ node, action })
         });
+        if (res.status === 401) {
+          showLockScreen();
+          return;
+        }
         const out = await res.json();
         alert(out.message);
         setTimeout(fetchStatus, 2000);
@@ -1051,7 +1272,12 @@ HTML_PAGE = """<!DOCTYPE html>
     async function refreshCurrentLog() {
       if (!activeLogNode) return;
       try {
-        const res = await fetch(`/api/logs?node=${activeLogNode}`);
+        const res = await fetch(`/api/logs?node=${activeLogNode}`, { headers: authHeaders() });
+        if (res.status === 401) {
+          closeLogModal();
+          showLockScreen();
+          return;
+        }
         const data = await res.json();
         document.getElementById('modal-log-text').textContent = data.logs || "(Log kosong / node belum menghasilkan log)";
       } catch (e) {
@@ -1067,9 +1293,13 @@ HTML_PAGE = """<!DOCTYPE html>
     async function triggerUpdate() {
       if (!confirm("Cek dan tarik pembaruan terbaru dari GitHub repo?")) return;
       try {
-        const res = await fetch('/api/update', { method: 'POST' });
+        const res = await fetch('/api/update', { method: 'POST', headers: authHeaders() });
+        if (res.status === 401) {
+          showLockScreen();
+          return;
+        }
         const out = await res.json();
-        alert(out.message + "\\n\\nLog:\\n" + (out.output || ''));
+        alert(out.message + "\n\nLog:\n" + (out.output || ''));
         setTimeout(fetchStatus, 2000);
       } catch (e) {
         alert("Gagal update: " + e);
@@ -1083,9 +1313,80 @@ HTML_PAGE = """<!DOCTYPE html>
 </html>
 """
 
+
+def get_dashboard_password():
+    cfg = load_user_config()
+    pwd = cfg.get("DASHBOARD_PASSWORD", "").strip()
+    if not pwd:
+        pwd = os.environ.get("DASHBOARD_PASSWORD", "").strip()
+    if not pwd:
+        pwd = "12345"
+    return pwd
+
+def get_auth_secret():
+    pwd = get_dashboard_password()
+    return hashlib.sha256(f"stb_cuanin_auth_{pwd}".encode()).digest()
+
+def generate_session_token():
+    ts = str(int(time.time()))
+    sig = hmac.new(get_auth_secret(), ts.encode(), hashlib.sha256).hexdigest()
+    return f"{ts}.{sig}"
+
+def verify_session_token(token):
+    if not token or "." not in token:
+        return False
+    parts = token.split(".", 1)
+    if len(parts) != 2:
+        return False
+    ts, sig = parts
+    try:
+        ts_int = int(ts)
+    except ValueError:
+        return False
+    # Max age: 30 days (2592000s)
+    if time.time() - ts_int > 2592000 or ts_int > time.time() + 3600:
+        return False
+    expected_sig = hmac.new(get_auth_secret(), ts.encode(), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(sig, expected_sig)
+
 class DashboardHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass
+
+    def get_token_from_request(self):
+        cookie_hdr = self.headers.get("Cookie", "")
+        if "stb_session=" in cookie_hdr:
+            for part in cookie_hdr.split(";"):
+                part = part.strip()
+                if part.startswith("stb_session="):
+                    return part.split("=", 1)[1].strip()
+        auth_hdr = self.headers.get("Authorization", "")
+        if auth_hdr.startswith("Bearer "):
+            return auth_hdr.split(" ", 1)[1].strip()
+        custom_hdr = self.headers.get("X-Dashboard-Token", "")
+        if custom_hdr:
+            return custom_hdr.strip()
+        return ""
+
+    def is_authenticated(self):
+        token = self.get_token_from_request()
+        return verify_session_token(token)
+
+    def send_unauthorized(self):
+        self.send_json(
+            {"error": "Unauthorized", "locked": True, "message": "Password dashboard diperlukan."},
+            status=401
+        )
+
+    def send_json(self, data, status=200, extra_headers=None):
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        if extra_headers:
+            for k, v in extra_headers.items():
+                self.send_header(k, v)
+        self.end_headers()
+        self.wfile.write(json.dumps(data).encode("utf-8"))
 
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -1098,7 +1399,15 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.wfile.write(HTML_PAGE.encode("utf-8"))
             return
 
-        elif path == "/api/status":
+        elif path == "/api/auth/status":
+            self.send_json({"authenticated": self.is_authenticated()})
+            return
+
+        # Protected endpoints below require authentication
+        if not self.is_authenticated():
+            return self.send_unauthorized()
+
+        if path == "/api/status":
             sys_stats = get_system_stats()
             nodes_stats = get_containers_status()
             data = {
@@ -1143,10 +1452,63 @@ class DashboardHandler(BaseHTTPRequestHandler):
             except Exception:
                 pass
 
-        if path == "/api/config":
+        if path == "/api/auth/login":
+            entered_pwd = payload.get("password", "")
+            if entered_pwd == get_dashboard_password():
+                token = generate_session_token()
+                self.send_json(
+                    {"success": True, "token": token, "message": "Login berhasil!"},
+                    extra_headers={"Set-Cookie": f"stb_session={token}; Path=/; Max-Age=2592000; SameSite=Lax"}
+                )
+            else:
+                self.send_json({"success": False, "message": "Password salah!"}, status=401)
+            return
+
+        elif path == "/api/auth/logout":
+            self.send_json(
+                {"success": True, "message": "Logout berhasil."},
+                extra_headers={"Set-Cookie": "stb_session=; Path=/; Max-Age=0; SameSite=Lax"}
+            )
+            return
+
+        # Protected endpoints below require authentication
+        if not self.is_authenticated():
+            return self.send_unauthorized()
+
+        if path == "/api/auth/change_password":
+            curr_pwd = payload.get("current_password", "").strip()
+            new_pwd = payload.get("new_password", "").strip()
+            if curr_pwd != get_dashboard_password():
+                self.send_json({"success": False, "message": "Password lama tidak sesuai!"})
+                return
+            if len(new_pwd) < 3:
+                self.send_json({"success": False, "message": "Password baru minimal 3 karakter!"})
+                return
+            save_user_config({"DASHBOARD_PASSWORD": new_pwd})
+            new_token = generate_session_token()
+            self.send_json(
+                {"success": True, "token": new_token, "message": "Password dashboard berhasil diubah!"},
+                extra_headers={"Set-Cookie": f"stb_session={new_token}; Path=/; Max-Age=2592000; SameSite=Lax"}
+            )
+            return
+
+        elif path == "/api/config":
+            pwd_changed = False
+            if "DASHBOARD_PASSWORD" in payload and payload["DASHBOARD_PASSWORD"].strip():
+                new_p = payload["DASHBOARD_PASSWORD"].strip()
+                if new_p != get_dashboard_password():
+                    pwd_changed = True
             save_user_config(payload)
             ok, out = run_compose_command("up")
-            self.send_json({"success": ok, "message": "Konfigurasi tersimpan dan node berhasil diterapkan!", "output": out})
+            extra_h = {}
+            if pwd_changed:
+                new_token = generate_session_token()
+                extra_h["Set-Cookie"] = f"stb_session={new_token}; Path=/; Max-Age=2592000; SameSite=Lax"
+            self.send_json({
+                "success": ok,
+                "message": "Konfigurasi tersimpan dan node berhasil diterapkan!",
+                "output": out
+            }, extra_headers=extra_h)
             return
 
         elif path == "/api/nodes/start":
@@ -1191,13 +1553,6 @@ class DashboardHandler(BaseHTTPRequestHandler):
         else:
             self.send_response(404)
             self.end_headers()
-
-    def send_json(self, data):
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.end_headers()
-        self.wfile.write(json.dumps(data).encode("utf-8"))
 
 def auto_update_repo():
     """

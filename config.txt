@@ -52,3 +52,9 @@ EARNFM_TOKEN=
 # ------------------------------------------------------------------------------
 REPOCKET_EMAIL=
 REPOCKET_API_KEY=
+
+# ------------------------------------------------------------------------------
+# 8. Keamanan Web Dashboard Monitoring (Port 12345)
+# Password default: 12345 (Dapat diubah untuk mengamankan STB dari jaringan WiFi/LAN)
+# ------------------------------------------------------------------------------
+DASHBOARD_PASSWORD=12345

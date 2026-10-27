@@ -1,0 +1,60 @@
+# ==============================================================================
+#                      STB-CUANIN CONFIGURATION FILE
+# ==============================================================================
+# Panduan:
+# 1. Isi akun Anda pada baris di bawah setiap layanan agar cuan masuk ke akun Anda.
+# 2. Jika Anda belum memiliki akun, klik/buka link pendaftaran (# DAFTAR) di atasnya.
+# 3. Simpan file ini atau konfigurasikan langsung melalui Web Dashboard port 12345.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Pawns.app (IPRoyal) - Minimal Payout: $5 (PayPal, Crypto, Gift Card)
+# DAFTAR: https://pawns.app?r=MiNe
+# ------------------------------------------------------------------------------
+PAWNS_EMAIL=
+PAWNS_PASSWORD=
+
+# ------------------------------------------------------------------------------
+# 2. PacketStream - Minimal Payout: $5 (PayPal)
+# DAFTAR: https://packetstream.io/?psr=3zSD
+# ------------------------------------------------------------------------------
+PACKETSTREAM_CID=
+
+# ------------------------------------------------------------------------------
+# 3. EarnApp - Minimal Payout: $10 (PayPal, Wise, Gift Card - Auto Redeem)
+# DAFTAR: https://earnapp.com/i/3zulx7k
+# CATATAN: Untuk EarnApp, klaim/tautkan perangkat melalui tombol di Web Dashboard port 12345
+# ------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+# 4. Honeygain - Minimal Payout: $0 via JumpTask (JMPT) / $20 via PayPal
+# DAFTAR: https://r.honeygain.me/MINDL15721
+# ------------------------------------------------------------------------------
+HONEYGAIN_EMAIL=
+HONEYGAIN_PASSWORD=
+
+# ------------------------------------------------------------------------------
+# 5. TraffMonetizer - Minimal Payout: $10 (USDT TRC-20, BTC)
+# DAFTAR: https://traffmonetizer.com/?aff=366499
+# ------------------------------------------------------------------------------
+TRAFFMONETIZER_TOKEN=
+
+# ------------------------------------------------------------------------------
+# 6. EarnFM - Minimal Payout: $15 (USDT, Crypto, PayPal)
+# DAFTAR: https://earn.fm/ref/MATTTAV6
+# ------------------------------------------------------------------------------
+EARNFM_TOKEN=
+
+# ------------------------------------------------------------------------------
+# 7. PacketShare - Minimal Payout: $10 (PayPal, Crypto)
+# DAFTAR: https://www.packetshare.io/?code=A260871CFD822E35
+# ------------------------------------------------------------------------------
+PACKETSHARE_EMAIL=
+PACKETSHARE_PASSWORD=
+
+# ------------------------------------------------------------------------------
+# 8. Repocket - Minimal Payout: $20 (PayPal)
+# DAFTAR: https://link.repocket.co/hr8i
+# ------------------------------------------------------------------------------
+REPOCKET_EMAIL=
+REPOCKET_API_KEY=

@@ -1,0 +1,19 @@
+[Unit]
+Description=STB-CUANIN Bandwidth Sharing Engine & Dashboard
+After=network.target docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/stb-cuanin
+EnvironmentFile=-/opt/stb-cuanin/.env
+ExecStartPre=-/usr/bin/git -C /opt/stb-cuanin pull --ff-only origin main
+ExecStart=/usr/bin/python3 /opt/stb-cuanin/stb-cuanin.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

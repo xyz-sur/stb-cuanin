@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+.data/
+docker-compose.generated.yml
+config.txt.bak
+dev_vault.enc
+.env
+.dev_vault_key
+link_earnapps.txt
+*.local
+tools/

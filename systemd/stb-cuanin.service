@@ -7,6 +7,7 @@ Wants=docker.service
 Type=simple
 User=root
 WorkingDirectory=/opt/stb-cuanin
+Environment=PYTHONUNBUFFERED=1
 EnvironmentFile=-/opt/stb-cuanin/.env
 ExecStartPre=-/usr/bin/git -C /opt/stb-cuanin pull --ff-only origin main
 ExecStart=/usr/bin/python3 /opt/stb-cuanin/stb-cuanin.py
